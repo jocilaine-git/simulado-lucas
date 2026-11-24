@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#13233f">
+<title>Simulado do Lucas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/*
+VOICE: amigável e direto, como um caderno de treino de intercâmbio
+IDEA: um cartão de embarque — cada seção é um trecho da viagem
+PICTURE: barra de progresso em forma de rota com 4 paradas (R, L, W, S)
+COLOUR and TYPE: azul-noite + amarelo-sol, Figtree
+LAYOUT: coluna única de celular, cartões grandes, botões de 52px
+*/
+:root{--navy:#13233f;--navy2:#1d3560;--sun:#ffc233;--sky:#e9f1ff;--ink:#14213d;--mut:#5b6b85;--ok:#1f9d6b;--bad:#d64545;--card:#fff;--bg:#f3f6fb;--line:#d9e2f0}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:17px/1.5 Figtree,system-ui,-apple-system,sans-serif;-webkit-text-size-adjust:100%}
+header{background:var(--navy);color:#fff;padding:14px 18px 16px;position:sticky;top:0;z-index:5}
+header .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+header h1{font-size:18px;margin:0;font-weight:800}
+#timer{font-variant-numeric:tabular-nums;background:var(--navy2);padding:4px 10px;border-radius:99px;font-weight:600;font-size:15px}
+#timer.low{background:var(--bad)}
+.route{display:flex;align-items:center;margin-top:12px;gap:0}
+.route .stop{width:30px;height:30px;border-radius:50%;background:var(--navy2);color:#9fb3d6;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.route .stop.on{background:var(--sun);color:var(--navy)}
+.route .stop.done{background:#fff;color:var(--navy)}
+.route .seg{flex:1;height:3px;background:var(--navy2)}
+.route .seg.done{background:#fff}
+main{max-width:640px;margin:0 auto;padding:18px 16px 120px}
+.card{background:var(--card);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 1px 2px #0001,0 6px 20px #13233f0d}
+h2{font-size:26px;line-height:1.15;margin:4px 0 10px}
+h3{font-size:19px;margin:0 0 8px}
+.mut{color:var(--mut);font-size:15px}
+.tag{display:inline-block;background:var(--sky);color:var(--navy2);font-weight:600;font-size:13px;padding:3px 10px;border-radius:99px;margin-bottom:8px}
+.texto{background:var(--sky);border-radius:14px;padding:16px;font-size:17px;white-space:pre-wrap}
+.q{margin:18px 0 6px;font-weight:600}
+.opt{display:block;width:100%;text-align:left;border:2px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;margin:8px 0;font:inherit;color:inherit;min-height:48px;cursor:pointer}
+.opt.sel{border-color:var(--navy2);background:var(--sky);font-weight:600}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border:0;border-radius:14px;font:inherit;font-weight:800;font-size:17px;cursor:pointer;margin-top:12px;padding:10px 16px}
+.btn.pri{background:var(--navy);color:#fff}
+.btn.sun{background:var(--sun);color:var(--navy)}
+.btn.sec{background:var(--sky);color:var(--navy2)}
+.btn.rec{background:var(--bad);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.opt:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.row{display:flex;gap:10px}.row>.btn{flex:1}
+textarea{width:100%;min-height:240px;border:2px solid var(--line);border-radius:14px;padding:14px;font:inherit;font-size:17px;resize:vertical}
+textarea:focus{outline:none;border-color:var(--navy2)}
+.wc{display:flex;justify-content:space-between;margin-top:6px;font-size:15px}
+.wc .ok{color:var(--ok);font-weight:700}
+.recbox{text-align:center;padding:18px 0}
+.pulse{width:84px;height:84px;border-radius:50%;background:var(--bad);margin:10px auto;animation:p 1.2s infinite}
+@keyframes p{0%{box-shadow:0 0 0 0 #d6454566}70%{box-shadow:0 0 0 22px #d6454500}100%{box-shadow:0 0 0 0 #d6454500}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+.big{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums}
+.score{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.score div{background:var(--sky);border-radius:14px;padding:14px;text-align:center}
+.score b{display:block;font-size:28px}
+.hist{width:100%;border-collapse:collapse;font-size:15px}
+.hist td,.hist th{padding:8px 4px;border-bottom:1px solid var(--line);text-align:left}
+.hist th{color:var(--mut);font-weight:600}
+.hist td.n{text-align:right;font-variant-numeric:tabular-nums}
+.check{color:var(--ok);font-weight:800}
+.wrong{color:var(--bad);text-decoration:line-through}
+.right{color:var(--ok);font-weight:700}
+.fb{border-left:4px solid var(--sun);background:#fff9e6;padding:10px 14px;border-radius:0 12px 12px 0;margin:10px 0;white-space:pre-wrap}
+.steps{list-style:none;padding:0;margin:10px 0}
+.steps li{padding:6px 0;color:var(--mut)}
+.steps li.done{color:var(--ok);font-weight:600}
+.notice{background:#fff3f3;border:1px solid #f3c4c4;color:#8a2020;border-radius:12px;padding:12px;margin:10px 0;font-size:15px}
+.center{text-align:center}
+.small{font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1 id="htitle">Simulado do Lucas</h1><span id="timer" hidden></span></div>
+  <div class="route" id="route" hidden></div>
+</header>
+<main id="app"><div class="card center"><p class="mut">Carregando…</p></div></main>
+<script src="config.js"></script>
+<script src="simulados.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
