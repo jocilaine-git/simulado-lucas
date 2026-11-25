@@ -28,6 +28,7 @@ function setup() {
   sim.getRange(2, S('Nota Writing (0-10)'), 999, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireNumberBetween(0, 10).setAllowInvalid(false).build());
   aud.getRange(2, AU('Nota (0-5)'), 999, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(['0', '1', '2', '3', '4', '5']).build());
   sim.setColumnWidth(S('Writing (texto)'), 380); sim.setColumnWidth(S('Comentário Writing'), 260); sim.setColumnWidth(S('Comentário geral'), 260);
+  sim.getRange(2, S('Reading'), 999, 2).setNumberFormat('@');
   sim.getRange('G:G').setWrap(true); sim.getRange('J:K').setWrap(true);
   aud.setColumnWidth(AU('Enunciado'), 260); aud.setColumnWidth(AU('Como deveria ser'), 300); aud.setColumnWidth(AU('Comentário'), 260); aud.setColumnWidth(AU('Frase corrigida (opcional)'), 260);
   aud.getRange('F:G').setWrap(true); aud.getRange('J:K').setWrap(true);
@@ -125,6 +126,24 @@ function corrigirLinks() {
   Logger.log('Links refeitos: ' + feitos);
 }
 
+// nota "7/10" que a planilha transformou em data (7 de outubro) volta a ser texto
+function nota_(x) {
+  if (!(x instanceof Date)) return x;
+  const [dia, mes] = Utilities.formatDate(x, 'America/Sao_Paulo', 'd/M').split('/');
+  return dia + '/' + mes;
+}
+
+// rode uma vez pelo editor para consertar Reading/Listening que viraram data na aba Simulados
+function corrigirNotas() {
+  const sim = SpreadsheetApp.getActive().getSheetByName('Simulados');
+  const n = sim.getLastRow();
+  if (n < 2) return;
+  const rg = sim.getRange(2, S('Reading'), n - 1, 2);
+  const vals = rg.getValues().map(l => l.map(nota_).map(String));
+  rg.setNumberFormat('@').setValues(vals);
+  Logger.log('Notas conferidas: ' + vals.length + ' linha(s)');
+}
+
 function finalizar_(d) {
   const ss = SpreadsheetApp.getActive(), sim = ss.getSheetByName('Simulados');
   const ja = acharLinha_(sim, d.envio);
@@ -133,6 +152,8 @@ function finalizar_(d) {
   let r;
   if (ja) { r = ja; sim.getRange(r, 1, 1, row.length).setValues([row]); }
   else { sim.appendRow(row); r = sim.getLastRow(); }
+  // "7/10" não pode virar data: grava Reading e Listening como texto
+  sim.getRange(r, S('Reading'), 1, 2).setNumberFormat('@').setValues([[String(d.reading), String(d.listening)]]);
   sim.getRange(r, S('Liberar correção')).insertCheckboxes();
   // linha de evolução
   const evo = ss.getSheetByName('Evolução');
@@ -188,7 +209,7 @@ function estado_(aluno) {
   };
   const historico = linhas.map(r => {
     const lib = v(r, 'Liberar correção') === true;
-    return { data: iso_(v(r, 'Data')), simulado: v(r, 'Simulado'), reading: v(r, 'Reading'), listening: v(r, 'Listening'),
+    return { data: iso_(v(r, 'Data')), simulado: v(r, 'Simulado'), reading: nota_(v(r, 'Reading')), listening: nota_(v(r, 'Listening')),
       writing: lib ? v(r, 'Nota Writing (0-10)') : '', speaking: lib ? mediaSpeaking(v(r, 'Envio')) : '' };
   });
   const pend = linhas.find(r => v(r, 'Liberar correção') === true && !v(r, 'Estudado em'));
