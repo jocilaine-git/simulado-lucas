@@ -24,7 +24,8 @@ function setup() {
   const aud = sheet_(ss, 'Áudios', AUD_COLS);
   const evo = sheet_(ss, 'Evolução', EVO_COLS);
 
-  sim.getRange(2, S('Liberar correção'), 999, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireCheckbox().build());
+  // sem caixas de seleção pré-criadas: elas contam como linhas preenchidas e empurravam os envios para a linha 1001
+  // (cada envio recebe a sua em finalizar_)
   sim.getRange(2, S('Nota Writing (0-10)'), 999, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireNumberBetween(0, 10).setAllowInvalid(false).build());
   aud.getRange(2, AU('Nota (0-5)'), 999, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(['0', '1', '2', '3', '4', '5']).build());
   sim.setColumnWidth(S('Writing (texto)'), 380); sim.setColumnWidth(S('Comentário Writing'), 260); sim.setColumnWidth(S('Comentário geral'), 260);
@@ -108,6 +109,11 @@ function salvarAudio_(d) {
   return { ok: true, fileId: file.getId() };
 }
 
+// separador de argumentos conforme o idioma da planilha (pt_BR e afins usam ";")
+function sep_(ss) {
+  return /^(en|ja|zh|ko|he|th)/.test(ss.getSpreadsheetLocale()) ? ',' : ';';
+}
+
 // link "▶ ouvir" gravado direto na célula (sem fórmula, não depende do idioma da planilha)
 function linkOuvir_(aud, r, fileId) {
   const url = 'https://drive.google.com/file/d/' + fileId + '/view';
@@ -162,8 +168,10 @@ function finalizar_(d) {
     const e = evo.getLastRow();
     evo.getRange(e, 1).setFormula('=Simulados!B' + r).setNumberFormat('dd/MM');
     evo.getRange(e, 2).setFormula('=Simulados!D' + r);
-    evo.getRange(e, 5).setFormula('=IF(Simulados!I' + r + '="","",Simulados!I' + r + '*10)');
-    evo.getRange(e, 6).setFormula('=IFERROR(AVERAGEIFS(\'Áudios\'!I:I,\'Áudios\'!A:A,Simulados!A' + r + ',\'Áudios\'!D:D,"<>estudo")/5*100,"")');
+    // planilha em português usa ";" entre argumentos; com "," a fórmula dá erro
+    const sep = sep_(ss);
+    evo.getRange(e, 5).setFormula(['=IF(Simulados!I' + r + '=""', '""', 'Simulados!I' + r + '*10)'].join(sep));
+    evo.getRange(e, 6).setFormula(['=IFERROR(AVERAGEIFS(\'Áudios\'!I:I', '\'Áudios\'!A:A', 'Simulados!A' + r, '\'Áudios\'!D:D', '"<>estudo")/5*100', '"")'].join(sep));
   }
   if (AVISAR_POR_EMAIL) {
     try {
