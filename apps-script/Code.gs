@@ -102,9 +102,27 @@ function salvarAudio_(d) {
   const row = [d.envio, new Date(), d.simulado, d.tipo, d.item, d.enunciado, d.modelo, '', '', '', '', d.tentativa || 1, file.getId(), d.mime || 'audio/mp4'];
   aud.appendRow(row);
   const r = aud.getLastRow();
-  aud.getRange(r, AU('Ouvir')).setFormula('=HYPERLINK("' + file.getUrl() + '","▶ ouvir")');
+  linkOuvir_(aud, r, file.getId());
   if (d.tipo === 'estudo') aud.getRange(r, 1, 1, AUD_COLS.length).setBackground('#eef5ff');
   return { ok: true, fileId: file.getId() };
+}
+
+// link "▶ ouvir" gravado direto na célula (sem fórmula, não depende do idioma da planilha)
+function linkOuvir_(aud, r, fileId) {
+  const url = 'https://drive.google.com/file/d/' + fileId + '/view';
+  aud.getRange(r, AU('Ouvir')).setRichTextValue(
+    SpreadsheetApp.newRichTextValue().setText('▶ ouvir').setLinkUrl(url).build());
+}
+
+// rode uma vez pelo editor para refazer os links das linhas que já existem na aba Áudios
+function corrigirLinks() {
+  const aud = SpreadsheetApp.getActive().getSheetByName('Áudios');
+  const n = aud.getLastRow();
+  if (n < 2) return;
+  const ids = aud.getRange(2, AU('FileId (técnico)'), n - 1, 1).getValues();
+  let feitos = 0;
+  ids.forEach((v, i) => { if (v[0]) { linkOuvir_(aud, i + 2, String(v[0])); feitos++; } });
+  Logger.log('Links refeitos: ' + feitos);
 }
 
 function finalizar_(d) {
